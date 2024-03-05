@@ -8,16 +8,19 @@ def inicializa():
     pygame.display.set_caption('Jogo do Prady')
 
     assets = {}
-    assets['lista_imagens'] = []
 
+    assets['lista_imagens'] = []
     for i in range(1, 17):
         assets['lista_imagens'].append(pygame.image.load(f'assets/img/img{i}.png'))
 
+    assets['som_tiro'] = 'assets/snd/pew.wav'
+    assets['som_tiro'] = pygame.mixer.Sound(assets['som_tiro'])
 
     state = {
         't0':-1,
         'last_updated': 0,
         'vidas': 3,
+        'tempo_inicio': 0,
     }
 
     assets['imagens'] = []
@@ -62,6 +65,8 @@ def atualiza_estado():
     t = (t1 - t0) / 1000
     state['last_updated'] = t1
 
+    state['tempo_inicio'] = t
+
     coracoes = chr(9829) * state['vidas']
     assets['imagem_vidas'] = assets['fonte'].render(coracoes, True, (255, 0, 0))
 
@@ -74,6 +79,7 @@ def atualiza_estado():
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT or state['vidas'] == 0:
+            print(state['tempo_inicio'])
             return False
         elif event.type == pygame.MOUSEBUTTONDOWN:
             mouse_x, mouse_y = event.pos
@@ -83,7 +89,14 @@ def atualiza_estado():
 
                 if img_x <= mouse_x <= mouse_x + img_width and img_y <= mouse_y <= img_y + img_height:
                     print(imagem)
+
+                    if img_x > 600 and imagem['tipo'] == 'cachorro':
+                        state['vidas'] -= 1
+                        for k in range(2):
+                            assets['imagens'].append(sorteia_imagem(assets, state))
+
                     if imagem['tipo'] == 'bagel':
+                        assets['som_tiro'].play()
                         state['vidas'] -= 1
                         print(state['vidas'])
                         for k in range(2):
@@ -103,6 +116,9 @@ def desenha(window, assets):
 
     window.blit(pygame.transform.scale(assets['imagem_vidas'], (60, 30)), (720, 0))
 
+    pontuacao_texto = assets['fonte'].render(f'Tempo: {int(state['tempo_inicio'])}s', True, (255, 255, 255))
+    window.blit(pontuacao_texto, (10, 10))
+
     pygame.display.update()
     
     return window
@@ -112,6 +128,11 @@ game = True
 def game_loop(window, assets, state):
     while True:
         clock.tick(30)  
+
+        if state['t0'] == -1:
+            state['t0'] = pygame.time.get_ticks()
+            state['tempo_inicio'] = 0
+
         if not atualiza_estado():
             return False
         desenha(window, assets)
